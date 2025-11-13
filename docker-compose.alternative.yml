@@ -1,0 +1,156 @@
+# Alternative Docker Compose configuration
+# This uses CompreFace for face recognition instead of custom implementation
+# Useful for faster MVP development
+
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:14-alpine
+    container_name: icam2_postgres
+    environment:
+      POSTGRES_DB: icam2
+      POSTGRES_USER: icam2
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-icam2password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U icam2"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - icam2_network
+
+  # CompreFace - Face Recognition Service
+  # https://github.com/exadel-inc/CompreFace
+  compreface-postgres:
+    image: postgres:14-alpine
+    container_name: compreface_postgres
+    environment:
+      POSTGRES_DB: frs
+      POSTGRES_USER: frs
+      POSTGRES_PASSWORD: ${COMPREFACE_DB_PASSWORD:-frs}
+    volumes:
+      - compreface_postgres_data:/var/lib/postgresql/data
+    networks:
+      - icam2_network
+
+  compreface-admin:
+    image: exadel/compreface-admin:latest
+    container_name: compreface_admin
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://compreface-postgres:5432/frs
+      - POSTGRES_USER=frs
+      - POSTGRES_PASSWORD=${COMPREFACE_DB_PASSWORD:-frs}
+      - ADMIN_JAVA_OPTS=-Xmx1g
+    depends_on:
+      - compreface-postgres
+    networks:
+      - icam2_network
+
+  compreface-api:
+    image: exadel/compreface-api:latest
+    container_name: compreface_api
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://compreface-postgres:5432/frs
+      - POSTGRES_USER=frs
+      - POSTGRES_PASSWORD=${COMPREFACE_DB_PASSWORD:-frs}
+      - API_JAVA_OPTS=-Xmx2g
+    depends_on:
+      - compreface-postgres
+    networks:
+      - icam2_network
+
+  compreface-fe:
+    image: exadel/compreface-fe:latest
+    container_name: compreface_fe
+    ports:
+      - "8001:80"
+    environment:
+      - API_URL=http://compreface-api:8080
+    depends_on:
+      - compreface-api
+      - compreface-admin
+    networks:
+      - icam2_network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: icam2_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - icam2_network
+
+  # ICAM2 API Service (to be developed)
+  # Uncomment when ready
+  # icam2-api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: icam2_api
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - DATABASE_URL=postgresql+asyncpg://icam2:${DB_PASSWORD:-icam2password}@postgres:5432/icam2
+  #     - COMPREFACE_URL=http://compreface-api:8080
+  #     - REDIS_URL=redis://redis:6379
+  #     - DEVICE=cuda:0
+  #   volumes:
+  #     - ./:/app
+  #     - ./weights:/app/weights
+  #     - ./data:/app/data
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - compreface-api
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   networks:
+  #     - icam2_network
+
+  # Nginx reverse proxy (optional)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: icam2_nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - icam2-api
+  #     - compreface-fe
+  #   networks:
+  #     - icam2_network
+
+volumes:
+  postgres_data:
+    driver: local
+  compreface_postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  icam2_network:
+    driver: bridge
