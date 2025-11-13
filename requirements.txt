@@ -1,18 +1,18 @@
 # ICAM2 Video Analytics Requirements
-# For Ubuntu 22.04 / WSL2 (CPU version)
+# For Ubuntu 22.04 / WSL2 with NVIDIA GPU (CUDA 12.1)
 
 # ============================================================================
-# Deep Learning Framework (CPU version)
+# Deep Learning Framework (GPU version with CUDA 12.1)
 # ============================================================================
---index-url https://download.pytorch.org/whl/cpu
-torch==2.1.2+cpu
-torchvision==0.16.2+cpu
-torchaudio==2.1.2+cpu
+torch==2.1.2
+torchvision==0.16.2
+torchaudio==2.1.2
+--extra-index-url https://download.pytorch.org/whl/cu121
 
 # ============================================================================
 # Computer Vision
 # ============================================================================
-opencv-python-headless==4.8.1.78
+opencv-python-headless==4.9.0.80
 ultralytics==8.0.220
 supervision==0.16.0
 
@@ -20,8 +20,7 @@ supervision==0.16.0
 # Face Recognition
 # ============================================================================
 insightface==0.7.3
-onnxruntime==1.16.3
-# deepface==0.0.79  # Опционально, если нужна дополнительная поддержка
+onnxruntime-gpu==1.16.3
 
 # ============================================================================
 # Pose Estimation (опционально для Phase 2)
@@ -73,7 +72,7 @@ pytz==2023.3
 pydantic-core==2.14.5
 
 # ============================================================================
-# Testing (опционально)
+# Testing
 # ============================================================================
 pytest==7.4.3
 pytest-asyncio==0.21.1
@@ -81,10 +80,8 @@ pytest-cov==4.1.0
 httpx==0.25.2
 
 # ============================================================================
-# Development Tools (опционально)
+# Development Tools (optional)
 # ============================================================================
 # black==23.11.0
 # flake8==6.1.0
 # pylint==3.0.2
-# mypy==1.7.1
-# isort==5.12.0

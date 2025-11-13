@@ -26,8 +26,15 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 if [ -f "requirements.txt" ]; then
     source venv/bin/activate
     echo "Это займет 5-10 минут, подождите..."
-    pip install -r requirements.txt
-    print_status "Зависимости установлены"
+    echo "Установка PyTorch с GPU (CUDA 12.1) поддержкой..."
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+    echo "Установка остальных зависимостей..."
+    pip install opencv-python-headless==4.9.0.80 ultralytics supervision insightface \
+        onnxruntime-gpu fastapi uvicorn[standard] python-multipart websockets aiofiles \
+        sqlalchemy alembic psycopg2-binary asyncpg pydantic pydantic-settings python-dotenv \
+        pillow numpy scipy python-jose[cryptography] passlib[bcrypt] python-dateutil pytz \
+        pydantic-core pytest pytest-asyncio pytest-cov httpx
+    print_status "Зависимости установлены (GPU версия)"
 else
     print_warning "requirements.txt не найден!"
     exit 1
